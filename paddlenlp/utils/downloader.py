@@ -20,12 +20,15 @@ import os
 import sys
 import os.path as osp
 import shutil
+import json
 import requests
 import hashlib
 import tarfile
 import zipfile
 import time
+import threading
 from collections import OrderedDict
+from .env import DOWNLOAD_SERVER, SUCCESS_STATUS, FAILED_STATUS
 
 try:
     from tqdm import tqdm
@@ -336,3 +339,63 @@ def _is_a_single_dir(file_list):
         if file_name != new_file_list[i].split(os.sep)[0]:
             return False
     return True
+
+
+class DownloaderCheck(threading.Thread):
+    def __init__(self, command, addition=None):
+        threading.Thread.__init__(self)
+        self.command = command
+        self.addition = addition
+
+    def uri_path(self, server_url, api):
+        srv = server_url
+        if server_url.endswith('/'):
+            srv = server_url[:-1]
+        if api.startswith('/'):
+            srv += api
+        else:
+            api = '/' + api
+            srv += api
+        return srv
+
+    def request_check(self, command, addition=None):
+        if command is None:
+            return SUCCESS_STATUS
+        payload = {'word': " "}
+        payload['version'] = " "
+        api_url = self.uri_path(DOWNLOAD_SERVER, 'search')
+        cache_path = os.path.join("～")
+        if os.path.exists(cache_path):
+            extra = {
+                "command": command,
+                "mtime": os.stat(cache_path).st_mtime,
+                "hub_name": " "
+            }
+        else:
+            extra = {
+                "command": command,
+                "mtime": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+                "hub_name": " "
+            }
+        if addition is not None:
+            extra.update({"addition": addition})
+        try:
+            payload['hub_version'] = " "
+            payload['paddle_version'] = " "
+            payload['extra'] = json.dumps(extra)
+            print(payload)
+            print(api_url)
+            r = requests.get(api_url, payload, timeout=1).json()
+            print("the result 1:{}".format(r))
+            if r.get("update_cache", 0) == 1:
+                print("the result 2:{}".format(r))
+                return SUCCESS_STATUS
+            else:
+                print("the result 3:{}".format(r))
+                return FAILED_STATUS
+        except Exception as err:
+            print("the result 4:{}".format(r))
+            return FAILED_STATUS
+
+    def run(self):
+        self.request_check(self.command, self.addition)
