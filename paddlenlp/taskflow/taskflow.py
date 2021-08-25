@@ -19,6 +19,8 @@ from ..utils.tools import get_env_device
 from ..transformers import ErnieCtmWordtagModel, ErnieCtmTokenizer
 from .text2knowledge import WordTagTask
 from .sentiment_analysis import SentaTask
+from .lexical_analysis import LacTask
+from .text_generation import TextGenerationTask
 
 warnings.simplefilter(action='ignore', category=Warning, lineno=0, append=False)
 
@@ -31,6 +33,33 @@ TASKS = {
         },
         "default": {
             "model": "wordtag"
+        }
+    },
+    "text_generation": {
+        "models": {
+            "gpt-cpm-large-cn": {
+                "task_class": TextGenerationTask,
+            },
+            "gpt2-medium-en": {
+                "task_class": TextGenerationTask,
+            }
+        },
+        "default": {
+            "model": "gpt-cpm-large-cn",
+            "generation_task": "question"
+        }
+    },
+    "lexical_analysis": {
+        "models": {
+            "lac": {
+                "task_class": LacTask,
+                "hidden_size": 128,
+                "emb_dim": 128,
+                "max_seq_len": 64
+            }
+        },
+        "default": {
+            "model": "lac"
         }
     },
     'sentiment_analysis': {
@@ -60,7 +89,12 @@ class TaskFlow(object):
 
     """
 
-    def __init__(self, task, model=None, device_id=0, **kwargs):
+    def __init__(self,
+                 task,
+                 model=None,
+                 device_id=0,
+                 static_mode=False,
+                 **kwargs):
         assert task in TASKS, "The task name:{} is not in TaskFlow list, please check your task name.".format(
             task)
         self.task = task
@@ -83,7 +117,7 @@ class TaskFlow(object):
         self.kwargs = kwargs
         task_class = TASKS[self.task]['models'][self.model]['task_class']
         self.task_instance = task_class(
-            model=self.model, task=self.task, **self.kwargs)
+            model=self.model, task=self.task, static_mode=False, **self.kwargs)
         task_list = TASKS.keys()
         TaskFlow.task_list = task_list
 

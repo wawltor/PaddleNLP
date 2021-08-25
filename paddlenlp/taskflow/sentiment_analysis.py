@@ -26,7 +26,7 @@ import paddle.nn.functional as F
 from ..datasets import load_dataset, MapDataset
 from ..data import Stack, Pad, Tuple, Vocab, JiebaTokenizer
 from .utils import download_file, add_docstrings
-from .model import BoWModel, LSTMModel
+from .models import BoWModel, LSTMModel
 from .task import Task
 
 URLS = {
@@ -80,13 +80,15 @@ class SentaTask(Task):
     Args:
         task(string): The name of task.
         model(string): The model name in the task.
+        static_mode(bool): The flag to control in the static/dygraph mode.
         kwargs (dict, optional): Additional keyword arguments passed along to the specific task. 
     """
 
-    def __init__(self, task, model, **kwargs):
-        super().__init__(task=task, model=model, **kwargs)
-        self._tokenizer = self._construct_tokenizer(model)
-        self._model_instance = self._construct_model(model)
+    def __init__(self, task, model, static_mode, **kwargs):
+        super().__init__(
+            task=task, model=model, static_mode=static_mode, **kwargs)
+        self._construct_tokenizer(model)
+        self._construct_model(model)
         self._label_map = {0: 'negative', 1: 'positive'}
         self._usage = usage
 
@@ -125,7 +127,7 @@ class SentaTask(Task):
         # Load the model parameter for the predict
         state_dict = paddle.load(model_full_name)
         model.set_dict(state_dict)
-        return model
+        self._model = model
 
     def _construct_tokenizer(self, model):
         """
@@ -143,7 +145,7 @@ class SentaTask(Task):
         self.kwargs['pad_token_id'] = pad_token_id
         self.kwargs['vocab_size'] = vocab_size
         tokenizer = JiebaTokenizer(vocab)
-        return tokenizer
+        sel._tokenizer = tokenizer
 
     def _preprocess(self, inputs, padding=True, add_special_tokens=True):
         """
@@ -198,7 +200,7 @@ class SentaTask(Task):
         with paddle.no_grad():
             for batch in inputs['data_loader']:
                 input_ids, seq_len = batch
-                logits = self._model_instance(input_ids, seq_len)
+                logits = self._model(input_ids, seq_len)
                 probs = F.softmax(logits, axis=1)
                 idx = paddle.argmax(probs, axis=1).numpy()
                 idx = idx.tolist()
