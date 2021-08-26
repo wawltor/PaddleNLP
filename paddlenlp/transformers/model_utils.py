@@ -320,6 +320,9 @@ class PretrainedModel(Layer, GenerationMixin):
         weight_path = resolved_resource_files["model_state"]
         assert weight_path.endswith(
             ".pdparams"), "suffix of weight must be .pdparams"
+
+        raw_state_dict = model.state_dict()
+        raw_state_dict = None
         state_dict = paddle.load(weight_path)
 
         # Make sure we are able to load base models as well as derived models

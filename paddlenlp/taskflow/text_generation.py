@@ -67,6 +67,7 @@ class TextGenerationTask(Task):
         """
         Construct the inference model for the predictor.
         """
+        paddle.nn.initializer.set_global_initializer(None, None)
         model_instance = GPTForGreedyGeneration.from_pretrained(
             self.model, max_predict_len=32)
         # Load the model parameter for the predict
@@ -171,8 +172,8 @@ class TextGenerationTask(Task):
                         self._static_program,
                         feed=data_dict,
                         fetch_list=self._static_fetch_targets)
-                    results.extend(tags_ids[0].tolist())
-                    lens.extend(np.array(data_dict['length']).tolist())
+                    results.extend(tags_ids[0].reshape([-1]))
+                    results.extend(out)
         inputs['result'] = results
         return inputs
 
@@ -180,3 +181,4 @@ class TextGenerationTask(Task):
         """
         The model output is allways the logits and pros, this function will convert the model output to raw text.
         """
+        print(inputs)
