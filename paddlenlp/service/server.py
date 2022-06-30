@@ -39,6 +39,7 @@ class SimpleServer(FastAPI):
             device (int|list|str, optional):
         """
         self._server_type = 'models'
+        self._router_manager.register_router()
 
     def register_task(self, task, handler, device=None):
         """

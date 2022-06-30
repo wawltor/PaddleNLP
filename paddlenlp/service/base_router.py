@@ -15,13 +15,14 @@
 
 import abc
 
+
 class BaseRouterManager(abc.ABC):
     _app = None
+
     def __init__(self, app):
         super().__init__()
         self._app = app
 
     @abc.abstractmethod
-   def register_router(self):
+    def register_router(self):
         return NotImplemented
-

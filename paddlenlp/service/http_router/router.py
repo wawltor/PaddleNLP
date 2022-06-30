@@ -14,15 +14,17 @@
 # limitations under the License.
 
 from fastapi import APIRouter, Request
-from ..base_route import BaseRouterManager
+from ..base_router import BaseRouterManager
 
 router = APIRouter()
 
-@router.post("/models/{model_name}/infer")
-def model_predict(model_name):
+
+@router.post("/models/infer")
+def model_predict():
     return 'just do it!'
 
+
 class HttpRouterManager(BaseRouterManager):
+
     def register_router(self):
         self._app.include_router(router)
-        

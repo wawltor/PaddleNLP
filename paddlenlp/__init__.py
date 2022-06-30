@@ -33,6 +33,7 @@ from . import utils
 from . import losses
 from . import experimental
 from .taskflow import Taskflow
+from .service import SimpleServer
 from . import trainer
 import paddle
 
