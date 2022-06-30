@@ -85,4 +85,7 @@ setuptools.setup(
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent',
     ],
+    entry_points={
+        'console_scripts': ['ppnlp-server=paddlenlp.service.main:main']
+    },
     license='Apache 2.0')

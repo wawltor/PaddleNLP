@@ -1,0 +1,53 @@
+# coding:utf-8
+# Copyright (c) 2022  PaddlePaddle Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from fastapi import FastAPI
+from .http_router import HttpRouterManager
+
+
+class SimpleServer(FastAPI):
+
+    def __init__(self, **kwargs):
+        """
+        Initial function for the PaddleNLP SimpleServer.
+        """
+        super().__init__(**kwargs)
+        self._router_manager = HttpRouterManager(self)
+        self._service_name = 'paddlenlp'
+        self._service_type = None
+
+    def register(self, model_path, handler, device=None):
+        """
+        The register function for the SimpleServer, the main register argrument as follows:
+        
+        Args:
+            name(str): The server name for the route. 
+            model_path (str): 
+            handler(str): 
+            device (int|list|str, optional):
+        """
+        self._server_type = 'models'
+
+    def register_task(self, task, handler, device=None):
+        """
+        The register function for the SimpleServer, the main register argrument as follows:
+        
+        Args:
+            name(str): The server name for the route. 
+            model_or_path (str): 
+            handler(str): 
+            device (int|list|str, optional):
+        """
+        self._server_type = 'taskflow'
