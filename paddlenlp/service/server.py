@@ -15,6 +15,8 @@
 
 from fastapi import FastAPI
 from .http_router import HttpRouterManager
+from .taskflow_manager import TaskflowManager
+from ..taskflow import Taskflow
 
 
 class SimpleServer(FastAPI):
@@ -25,10 +27,12 @@ class SimpleServer(FastAPI):
         """
         super().__init__(**kwargs)
         self._router_manager = HttpRouterManager(self)
+        self._taskflow_manager = None
+        self._model_manager = None
         self._service_name = 'paddlenlp'
         self._service_type = None
 
-    def register(self, model_path, handler, device=None):
+    def register(self, task_name, model_path, handler, device=None):
         """
         The register function for the SimpleServer, the main register argrument as follows:
         
@@ -41,7 +45,7 @@ class SimpleServer(FastAPI):
         self._server_type = 'models'
         self._router_manager.register_router()
 
-    def register_task(self, task, handler, device=None):
+    def register_taskflow(self, task_name, task, func=None):
         """
         The register function for the SimpleServer, the main register argrument as follows:
         
@@ -51,4 +55,27 @@ class SimpleServer(FastAPI):
             handler(str): 
             device (int|list|str, optional):
         """
-        self._server_type = 'taskflow'
+        self._server_type = 'server'
+        check_flag = True
+
+        # Check the task type, it must be the instance of Taskflow or List[Taskflow]
+        if isinstance(task, Taskflow):
+            task = [task]
+        for t in task:
+            if not isinstance(t, Taskflow):
+                check_flag = False
+                break
+        if not check_flag:
+            raise TypeError(
+                "Unsupport task type {}, it must be instance of Taskflow or List[Taskflow]"
+                .format(type(task)))
+
+        # Register Taskflow service router
+        taskflow_manager = TaskflowManager()
+        self._taskflow_manager = taskflow_manager
+        self._taskflow_manager._register(task, func)
+        self._router_manager.register_taskflow_router(task_name)
+
+        # Register the Taskflow task message
+        #self._taskflow_manager = TaskflowManager()
+        #self._taskflow_manager.register(task, func)

@@ -12,16 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from .base_handler import BaseHandler
 
-import abc
 
-class BasePredictorManager(abc.ABC):
-    __resource_dict__ = {} 
-    def __init__(self, app):
+class TaskflowHandler(BaseHandler):
+
+    def __init__(self):
         super().__init__()
-        self._app = app
+        self._name = 'taskflow_handler'
 
-    @abc.abstractmethod
-    def register_router(self):
-        return NotImplemented
-
+    @classmethod
+    def handler(cls, predictor, text, text_pair=None):
+        return predictor(text)

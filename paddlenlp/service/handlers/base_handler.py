@@ -16,17 +16,13 @@
 import abc
 
 
-class BaseRouterManager(abc.ABC):
-    _app = None
+class BaseHandler(abc.ABC):
 
-    def __init__(self, app):
+    def __init__(self):
         super().__init__()
-        self._app = app
+        self._name = 'base_handler'
 
+    @classmethod
     @abc.abstractmethod
-    def register_taskflow_router(self):
-        return NotImplemented
-
-    @abc.abstractmethod
-    def register_taskflow_router(self):
+    def handler(cls, text, text_pair=None):
         return NotImplemented

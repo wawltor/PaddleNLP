@@ -12,3 +12,25 @@
 # without warranties or conditions of any kind, either express or implied.
 # see the license for the specific language governing permissions and
 # limitations under the license.
+
+import time
+from .handlers import TaskflowHandler
+
+
+class TaskflowManager:
+
+    def __init__(self):
+        self._task = None
+        self._handler = TaskflowHandler.handler
+
+    def _register(self, task, func=None):
+        self._task = task
+        if func is not None:
+            print("*****" * 100)
+            self._handler = func
+
+    def _predict(self, text):
+        t = time.time()
+        t = int(round(t * 1000))
+        task_index = t % len(self._task)
+        return self._handler(self._task[task_index], text)
