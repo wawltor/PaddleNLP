@@ -22,5 +22,5 @@ class TaskflowHandler(BaseHandler):
         self._name = 'taskflow_handler'
 
     @classmethod
-    def handler(cls, predictor, text, text_pair=None):
+    def handler(cls, predictor, tokenizer=None, text, text_pair=None, **kwargs):
         return predictor(text)

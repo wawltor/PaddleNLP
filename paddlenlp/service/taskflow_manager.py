@@ -26,7 +26,6 @@ class TaskflowManager:
     def _register(self, task, func=None):
         self._task = task
         if func is not None:
-            print("*****" * 100)
             self._handler = func
 
     def _predict(self, text):

@@ -22,7 +22,13 @@ class BaseHandler(abc.ABC):
         super().__init__()
         self._name = 'base_handler'
 
-    @classmethod
     @abc.abstractmethod
-    def handler(cls, text, text_pair=None):
+    @classmethod
+    def handler(cls,
+                predictor,
+                tokenizer=None,
+                text,
+                text_pair=None,
+                tokenizer=None,
+                **kwargs):
         return NotImplemented

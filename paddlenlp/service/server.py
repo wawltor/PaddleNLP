@@ -32,7 +32,13 @@ class SimpleServer(FastAPI):
         self._service_name = 'paddlenlp'
         self._service_type = None
 
-    def register(self, task_name, model_path, handler, device=None):
+    def register(self,
+                 task_name,
+                 params_path,
+                 model_config_path=None,
+                 tokenizer_config_path=None,
+                 input_spec=None,
+                 device=None):
         """
         The register function for the SimpleServer, the main register argrument as follows:
         
@@ -43,6 +49,11 @@ class SimpleServer(FastAPI):
             device (int|list|str, optional):
         """
         self._server_type = 'models'
+        model_manager = ModelManager()
+        self._model_manager = model_manager
+        self._model_manger._register(task_name, model_path, handler, device,
+                                     input_spec)
+
         self._router_manager.register_router()
 
     def register_taskflow(self, task_name, task, func=None):
@@ -75,7 +86,3 @@ class SimpleServer(FastAPI):
         self._taskflow_manager = taskflow_manager
         self._taskflow_manager._register(task, func)
         self._router_manager.register_taskflow_router(task_name)
-
-        # Register the Taskflow task message
-        #self._taskflow_manager = TaskflowManager()
-        #self._taskflow_manager.register(task, func)

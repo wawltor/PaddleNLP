@@ -28,7 +28,7 @@ class ResponseBase(BaseModel):
 
 class HttpRouterManager(BaseRouterManager):
 
-    def register_model_router(self):
+    def register_models_router(self):
         self._app.include_router(model_router)
 
     def register_taskflow_router(self, task_name):

@@ -12,3 +12,26 @@
 # without warranties or conditions of any kind, either express or implied.
 # see the license for the specific language governing permissions and
 # limitations under the license.
+
+import time
+from .handlers import TaskflowHandler
+
+
+class ModelManager:
+
+    def __init__(self):
+        self._task_name = 'models_predict'
+        self._model_path = None
+
+    def _register(self, task_name, model_path, handler=None, device=None):
+        self._task_name = task_name
+        self._model_path = model_path
+
+    def _load_model_config():
+        config_path = os.path.join(self._model_path, '')
+
+    def _predict(self, text):
+        t = time.time()
+        t = int(round(t * 1000))
+        task_index = t % len(self._task)
+        return self._handler(self._task[task_index], text)

@@ -347,7 +347,9 @@ def convert_ext_examples(raw_examples,
     logger.info(f"Converting doccano data...")
     with tqdm(total=len(raw_examples)) as pbar:
         for line in raw_examples:
+            print(line)
             items = json.loads(line)
+            print(items)
             entity_id = 0
             if "data" in items.keys():
                 relation_mode = False
