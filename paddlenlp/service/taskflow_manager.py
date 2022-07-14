@@ -18,6 +18,9 @@ from .handlers import TaskflowHandler
 
 
 class TaskflowManager:
+    """
+    The TaskflowManager could predict the raw text.
+    """
 
     def __init__(self):
         self._task = None

@@ -15,35 +15,56 @@
 
 import os
 import sys
-import error
+import errno
+import paddle
+from paddle import inference
+from ..transformers import PretrainedModel
 from ..utils.log import logger
 from ..taskflow.utils import dygraph_mode_guard
+from .input_mapping import mappings
 
 
 class Predictor:
 
-    def __init__(self,
-                 model_path,
-                 input_specs,
-                 model_config_path=None,
-                 precision='fp32',
-                 device=None):
-        self._model_path = model_path
+    def __init__(self, params_path, model_class_or_name, input_spec, precision,
+                 device):
+        self._params_path = model_path
         self._static_model_path = "auto_static"
-        self._model_config_path = model_config_path
-        self._input_specs = input_specs
-        self._precision = 'fp32'
+        self._model_class_or_name = model_config_path
+        self._input_spec = input_spec
+        self._precision = precision
         self._cpu_thread = 8
         self._config = None
+        paddle.set_device()
 
-    def _model_config_path(self):
-        if self._model_config_path is not None:
-            return self._model_config_path
+    def _model_class(self):
+        if self._model_class_or_name is not None:
+            if isinstance(self._model_class_or_name, str):
+                return getattr(paddlenlp.transformers, class_name)
+            elif isinstance(self._model_class_or_name, PretrainedModel):
+                return self._model_class_or_name
+            else:
+                logger.error(
+                    'The argrument of `model_class_or_name`  must be the name or class of paddlenlp.transformers.PretrainedModel'
+                )
+                sys.exit(-1)
         else:
             for file_name in os.listdir(self._model_path):
                 if file_name.count('model_config'):
-                    return os.path.join(self._model_path, file_name)
-            return None
+                    model_config_path = os.path.join(self._model_path,
+                                                     file_name)
+                    config_json_dict = json.load(open(model_config_path))
+                    class_name = config_json_dict['init_class']
+                    model_class = getattr(paddlenlp.transformers, class_name)
+                    return model_class
+        return None
+
+    def _model_input_spec(self, model_class):
+        if self._input_spec is None:
+            return self._input_spec
+        model_name = str(model_class).split(".")[-1]
+        if model_name in mappings:
+            return mappings[model_name]
         return None
 
     def _static_model_path(self):
@@ -57,40 +78,66 @@ class Predictor:
                 return os.path.join(model_path, file_name[:-10])
         return None
 
+    def _is_int8_model(self, model_path):
+        paddle.set_device('cpu')
+        model = paddle.jit.load(model_path)
+        program = model.program()
+        for block in program.blocks:
+            for i, op in enumerate(block.ops):
+                if op.type.count("quantize"):
+                    paddle.set_device(self._device)
+                    return True
+        paddle.set_device(self._device)
+        return False
+
     def create_predictor(self):
         # Get the model parameter path and model config path
-        model_config_path = self._model_config_path()
+        model_class = self._model_class()
+
+        if model_class is None:
+            logger.error(
+                'The argrument of `model_class_or_name`  must be the name or class of paddlenlp.transformers.PretrainedModel'
+            )
+            sys.exit(-1)
         static_model_path = self._static_model_path()
 
         # Convert the Draph Model to Static Model
+        is_from_static = True
         if static_model_path is None:
-            if os.path.exists(model_config_path):
-                raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT),
-                                        'model_config.json')
-            config_json_dict = json.load(open(model_config_path))
-            class_name = config_json_dict['init_class']
             # FIXME(wawltor) The model class is not class of paddlenlp.transformers
-            model_class = getattr(paddlenlp.transformers, class_name)
             model_instance = model_class.from_pretrained(self._model_path)
             model_instance.eval()
-            self._convert_dygraph_to_static(model_instance)
+            input_spec = self._model_input_spec(model_class)
+            if input_spec is None:
+                logger.error('You must be set the input_spec')
+                sys.exit(-1)
+            self._convert_dygraph_to_static(model_instance, input_spec)
             static_model_path = os.path.join(self._model_path, 'inference')
+            is_from_static = False
 
+        is_int8_model = False
+        if is_from_static:
+            is_int8_model = self._is_int8_model(static_model_path)
         # Load the inference model and maybe we will convert the onnx model
         # Judge the predictor type for the inference
-        predictor_type = self._check_predictor_type()
+        if self._precision == 'int8' and not is_int8_model:
+            self._precision = 'fp32'
+        if is_int8_model:
+            self._precision = 'int8'
 
-    def _get_model_precision_type(self):
-        pass
+        predictor_type = self._check_predictor_type(is_int8_model)
+        if predictor_type == 'paddle_inference':
+            self._prepare_paddle_mode(static_model_path, is_int8_model)
+        else:
+            self._prepare_onnx_mode
 
     def _check_predictor_type(self):
         predictor_type = 'paddle_inference'
-        if paddle.get_device() == 'cpu' and self._precision == 'fp16':
-            logger.warning(
-                "The inference precision is change to 'fp32', 'fp16' inference only takes effect on gpu."
-            )
+        device = paddle.get_device()
+        if self._precision == 'int8' or device == "xpu" or device == "cpu":
+            predictor_type = 'paddle_inference'
         else:
-            if self._precision == 'fp16':
+            if device == 'gpu' and self._precision == 'fp16':
                 try:
                     import onnx
                     import onnxruntime as ort
@@ -103,22 +150,37 @@ class Predictor:
                     )
         return predictor_type
 
-    def _prepare_static_mode(self):
+    def _prepare_paddle_mode(self, static_model_path):
         """
         Construct the input data and predictor in the PaddlePaddele static mode. 
         """
+        self._config = paddle.inference.Config(
+            os.path.join(static_model_path, ".pdmodel"),
+            os.path.join(static_model_path, ".pdiparams"))
+        self._config.disable_glog_info()
         if paddle.get_device() == 'cpu':
             self._config.disable_gpu()
             self._config.enable_mkldnn()
+            self._config.enable_memory_optim()
+            if self._precision == 'int8':
+                config.enable_mkldnn_bfloat16()
+            elif self._precision == 'fp16':
+                config.enable_mkldnn_int8()
         else:
             self._config.enable_use_gpu(100, self.kwargs['device_id'])
-            # TODO(linjieccc): enable embedding_eltwise_layernorm_fuse_pass after fixed
-            self._config.delete_pass("embedding_eltwise_layernorm_fuse_pass")
-        self._config.set_cpu_math_library_num_threads(self._num_threads)
+            precision_type = inference.PrecisionType.Float32
+            if self._precision == 'int8':
+                precision_type = inference.PrecisionType.INT8
+                # FIXME(wawltor) The paddlenlp serving support the int8 model
+                logger.warning(
+                    'The PaddleNLP serving do not support the INT8 model, we will support later!'
+                )
+                sys.exit(-1)
+
         self._config.switch_use_feed_fetch_ops(False)
-        self._config.disable_glog_info()
-        self._config.enable_memory_optim()
-        self.predictor = paddle.inference.create_predictor(self._config)
+        self._config.set_cpu_math_library_num_threads(self._num_threads)
+        self._config.delete_pass("embedding_eltwise_layernorm_fuse_pass")
+        self._predictor = paddle.inference.create_predictor(self._config)
         self.input_handles = [
             self.predictor.get_input_handle(name)
             for name in self.predictor.get_input_names()
@@ -151,19 +213,20 @@ class Predictor:
             trans_model = float16.convert_float_to_float16(onnx_model,
                                                            keep_io_types=True)
             onnx.save_model(trans_model, fp16_model_file)
+        device_id = int(self._device.split(':')[1])
+        #providers = ['CUDAExecutionProvider', provider_options=[{'device_id': device_id}]]
         providers = ['CUDAExecutionProvider']
         sess_options = ort.SessionOptions()
-        sess_options.intra_op_num_threads = self._num_threads
         sess_options.inter_op_num_threads = self._num_threads
-        self.predictor = ort.InferenceSession(fp16_model_file,
-                                              sess_options=sess_options,
-                                              providers=providers)
-        assert 'CUDAExecutionProvider' in self.predictor.get_providers(), f"The environment for GPU inference is not set properly. " \
+        self._predictor = ort.InferenceSession(fp16_model_file,
+                                               sess_options=sess_options,
+                                               providers=providers)
+        assert 'CUDAExecutionProvider' in self._predictor.get_providers(), f"The environment for GPU inference is not set properly. " \
             "A possible cause is that you had installed both onnxruntime and onnxruntime-gpu. " \
             "Please run the following commands to reinstall: \n " \
             "1) pip uninstall -y onnxruntime onnxruntime-gpu \n 2) pip install onnxruntime-gpu"
 
-    def _convert_dygraph_to_static(self, model_instance):
+    def _convert_dygraph_to_static(self, model_instance, input_spec):
         """
         Convert the dygraph model to static model.
         """
@@ -172,7 +235,7 @@ class Predictor:
         logger.info("Converting to the inference model cost a little time.")
         try:
             static_model = paddle.jit.to_static(model_instance,
-                                                input_spec=self._input_spec)
+                                                input_spec=input_spec)
             save_path = os.path.join(self._model_path, "static", "inference")
             paddle.jit.save(static_model, save_path)
             logger.info(

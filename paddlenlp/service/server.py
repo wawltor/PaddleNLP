@@ -35,9 +35,10 @@ class SimpleServer(FastAPI):
     def register(self,
                  task_name,
                  params_path,
-                 model_config_path=None,
-                 tokenizer_config_path=None,
+                 model_class_or_name=None,
+                 tokenizer_class_or_name=None,
                  input_spec=None,
+                 handler=None,
                  device=None):
         """
         The register function for the SimpleServer, the main register argrument as follows:
@@ -49,11 +50,11 @@ class SimpleServer(FastAPI):
             device (int|list|str, optional):
         """
         self._server_type = 'models'
-        model_manager = ModelManager()
+        model_manager = ModelManager(task_name, model_class_or_name,
+                                     tokenizer_class_or_name, input_spec,
+                                     handler, device)
         self._model_manager = model_manager
-        self._model_manger._register(task_name, model_path, handler, device,
-                                     input_spec)
-
+        self._model_manger.register()
         self._router_manager.register_router()
 
     def register_taskflow(self, task_name, task, func=None):

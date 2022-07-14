@@ -12,15 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from .base_handler import BaseHandler
-
-
-class TaskflowHandler(BaseHandler):
+class TaskflowHandler:
 
     def __init__(self):
-        super().__init__()
         self._name = 'taskflow_handler'
 
     @classmethod
-    def handler(cls, predictor, tokenizer=None, text, text_pair=None, **kwargs):
+    def handler(cls, predictor, text, text_pair=None):
         return predictor(text)
