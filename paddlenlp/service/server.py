@@ -39,7 +39,8 @@ class SimpleServer(FastAPI):
                  tokenizer_class_or_name=None,
                  input_spec=None,
                  handler=None,
-                 device=None):
+                 device_id=0,
+                 batch_size=1):
         """
         The register function for the SimpleServer, the main register argrument as follows:
         
