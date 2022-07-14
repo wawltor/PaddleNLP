@@ -31,10 +31,46 @@ class HttpRouterManager(BaseRouterManager):
     def register_models_router(self):
         self._app.include_router(model_router)
 
+        # url path to register the model
+        paths = [f"/models/{task_name}"]
+        print(paths)
+
+        # unique name to create the pydantic model
+        unique_name = (hashlib.md5(task_name.encode()).hexdigest())
+
+        # create response model
+        resp_model = create_model(
+            "V1V1ResponseModel" + unique_name,
+            result=(typing.Any, ...),
+            __base__=ResponseBase,
+        )
+
+        # template predict endpoint function to dynamically serve different models
+        def predict(
+            text: str,
+            request: Request,
+        ):
+            result = self._app._model_manager._predict(text)
+            return {"text": text, 'result': result}
+
+        # register the route and add to the app
+        router = APIRouter()
+        for path in paths:
+            router.add_api_route(
+                path,
+                predict,
+                methods=["get"],
+                summary=f"{task_name.title()}",
+                response_model=resp_model,
+                response_model_exclude_unset=True,
+                response_model_exclude_none=True,
+            )
+        self._app.include_router(router)
+
     def register_taskflow_router(self, task_name):
 
         # url path to register the model
-        paths = [f"/models/{task_name}"]
+        paths = [f"/taskflow/{task_name}"]
         print(paths)
 
         # unique name to create the pydantic model

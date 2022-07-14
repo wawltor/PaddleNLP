@@ -24,6 +24,5 @@ class BaseHandler(metaclass=ABCMeta):
         self._name = 'base_handler'
 
     @abstractmethod
-    @classmethod
-    def handler(cls, predictor, tokenizer, text, text_pair=None):
+    def __call__(cls, predictor, tokenizer, text, text_pair=None):
         pass

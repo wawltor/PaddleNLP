@@ -35,7 +35,8 @@ class Predictor:
         self._precision = precision
         self._cpu_thread = 8
         self._config = None
-        paddle.set_device()
+        paddle.set_device(device)
+        self._create_predictor()
 
     def _model_class(self):
         if self._model_class_or_name is not None:
@@ -64,7 +65,7 @@ class Predictor:
             return self._input_spec
         model_name = str(model_class).split(".")[-1]
         if model_name in mappings:
-            return mappings[model_name]
+            return mappings[model_name][0]
         return None
 
     def _static_model_path(self):
@@ -90,7 +91,7 @@ class Predictor:
         paddle.set_device(self._device)
         return False
 
-    def create_predictor(self):
+    def _create_predictor(self):
         # Get the model parameter path and model config path
         model_class = self._model_class()
 
@@ -125,11 +126,11 @@ class Predictor:
         if is_int8_model:
             self._precision = 'int8'
 
-        predictor_type = self._check_predictor_type(is_int8_model)
-        if predictor_type == 'paddle_inference':
+        self._predictor_type = self._check_predictor_type(is_int8_model)
+        if self._predictor_type == 'paddle_inference':
             self._prepare_paddle_mode(static_model_path, is_int8_model)
         else:
-            self._prepare_onnx_mode
+            self._prepare_onnx_mode()
 
     def _check_predictor_type(self):
         predictor_type = 'paddle_inference'
@@ -195,7 +196,7 @@ class Predictor:
         import onnxruntime as ort
         import paddle2onnx
         from onnxconverter_common import float16
-        onnx_dir = os.path.join(self._task_path, 'onnx')
+        onnx_dir = os.path.join(self._params_path, 'onnx')
         if not os.path.exists(onnx_dir):
             os.mkdir(onnx_dir)
         float_onnx_file = os.path.join(onnx_dir, 'model.onnx')
@@ -213,14 +214,17 @@ class Predictor:
             trans_model = float16.convert_float_to_float16(onnx_model,
                                                            keep_io_types=True)
             onnx.save_model(trans_model, fp16_model_file)
-        device_id = int(self._device.split(':')[1])
         #providers = ['CUDAExecutionProvider', provider_options=[{'device_id': device_id}]]
         providers = ['CUDAExecutionProvider']
         sess_options = ort.SessionOptions()
         sess_options.inter_op_num_threads = self._num_threads
         self._predictor = ort.InferenceSession(fp16_model_file,
                                                sess_options=sess_options,
-                                               providers=providers)
+                                               providers=providers,
+                                               provider_options=[{
+                                                   'device_id':
+                                                   device_id
+                                               }])
         assert 'CUDAExecutionProvider' in self._predictor.get_providers(), f"The environment for GPU inference is not set properly. " \
             "A possible cause is that you had installed both onnxruntime and onnxruntime-gpu. " \
             "Please run the following commands to reinstall: \n " \
