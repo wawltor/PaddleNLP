@@ -21,8 +21,8 @@ class BaseHandler(metaclass=ABCMeta):
 
     def __init__(self):
         super().__init__()
-        self._name = 'base_handler'
 
+    @classmethod
     @abstractmethod
-    def __call__(cls, predictor, tokenizer, text, text_pair=None):
+    def process(cls, predictor, tokenizer, text, text_pair=None, batch_size=1):
         pass

@@ -24,15 +24,15 @@ class TaskflowManager:
 
     def __init__(self):
         self._task = None
-        self._handler = TaskflowHandler.handler
+        self._handler_func = TaskflowHandler.process
 
     def _register(self, task, func=None):
         self._task = task
         if func is not None:
             self._handler = func
 
-    def _predict(self, text):
+    def predict(self, text):
         t = time.time()
         t = int(round(t * 1000))
         task_index = t % len(self._task)
-        return self._handler(self._task[task_index], text)
+        return self._handler_func(self._task[task_index], text)

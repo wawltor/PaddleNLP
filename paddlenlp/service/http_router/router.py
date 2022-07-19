@@ -28,9 +28,7 @@ class ResponseBase(BaseModel):
 
 class HttpRouterManager(BaseRouterManager):
 
-    def register_models_router(self):
-        self._app.include_router(model_router)
-
+    def register_models_router(self, task_name):
         # url path to register the model
         paths = [f"/models/{task_name}"]
         print(paths)
@@ -47,10 +45,12 @@ class HttpRouterManager(BaseRouterManager):
 
         # template predict endpoint function to dynamically serve different models
         def predict(
-            text: str,
             request: Request,
+            text: str,
+            text_pair: str = None,
         ):
-            result = self._app._model_manager._predict(text)
+            print("The text:{}, text_pair:{}".format(text, text_pair))
+            result = self._app._model_manager.predict(text, text_pair)
             return {"text": text, 'result': result}
 
         # register the route and add to the app
@@ -85,10 +85,10 @@ class HttpRouterManager(BaseRouterManager):
 
         # template predict endpoint function to dynamically serve different models
         def predict(
-            text: str,
             request: Request,
+            text: str,
         ):
-            result = self._app._taskflow_manager._predict(text)
+            result = self._app._taskflow_manager.predict(text)
             return {"text": text, 'result': result}
 
         # register the route and add to the app

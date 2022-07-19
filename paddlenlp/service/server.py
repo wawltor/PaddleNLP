@@ -15,6 +15,7 @@
 
 from fastapi import FastAPI
 from .http_router import HttpRouterManager
+from .model_manager import ModelManager
 from .taskflow_manager import TaskflowManager
 from ..taskflow import Taskflow
 
@@ -34,11 +35,12 @@ class SimpleServer(FastAPI):
 
     def register(self,
                  task_name,
-                 params_path,
+                 model_path,
                  model_class_or_name=None,
-                 tokenizer_class_or_name=None,
+                 tokenizer_name=None,
                  input_spec=None,
                  handler=None,
+                 precision='fp32',
                  device_id=0,
                  batch_size=1):
         """
@@ -51,12 +53,12 @@ class SimpleServer(FastAPI):
             device (int|list|str, optional):
         """
         self._server_type = 'models'
-        model_manager = ModelManager(task_name, model_class_or_name,
-                                     tokenizer_class_or_name, input_spec,
-                                     handler, device)
+        model_manager = ModelManager(task_name, model_path, model_class_or_name,
+                                     tokenizer_name, input_spec, handler,
+                                     precision, device_id, batch_size)
         self._model_manager = model_manager
-        self._model_manger.register()
-        self._router_manager.register_router()
+        self._model_manager.register()
+        self._router_manager.register_models_router(task_name)
 
     def register_taskflow(self, task_name, task, func=None):
         """
