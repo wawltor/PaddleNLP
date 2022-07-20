@@ -24,7 +24,7 @@ from ..transformers import AutoTokenizer
 
 
 class ModelManager:
-
+    # FIXME(wawltor) Support the not pretreained model Tokenizer
     def __init__(self, task_name, model_path, model_class_or_name,
                  tokenizer_name, input_spec, handler, precision, device_id,
                  batch_size):
@@ -43,10 +43,8 @@ class ModelManager:
         if self._handler is None:
             model_class = self._get_model_class()
             model_handler = self._get_model_handler_class(model_class)
-            print("The model handler is {}".format(model_handler))
             self._handler = model_handler.process
             assert self._handler is not None, 'The Handler must be not register, you could set the class of handler'
-        print(self._handler)
 
         # Create the model predictor
         device = get_env_device()

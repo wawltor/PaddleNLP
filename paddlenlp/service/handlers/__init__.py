@@ -1,2 +1,2 @@
 from .taskflow_handler import TaskflowHandler
-from .model_handler import *
+from .seq_cls_handler import SequenceClassificationModelHandler

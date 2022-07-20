@@ -17,7 +17,7 @@ import abc
 from abc import ABCMeta, abstractmethod
 
 
-class BaseHandler(metaclass=ABCMeta):
+class BaseModelHandler(metaclass=ABCMeta):
 
     def __init__(self):
         super().__init__()

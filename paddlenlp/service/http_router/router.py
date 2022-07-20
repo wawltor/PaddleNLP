@@ -29,31 +29,30 @@ class ResponseBase(BaseModel):
 class HttpRouterManager(BaseRouterManager):
 
     def register_models_router(self, task_name):
-        # url path to register the model
-        paths = [f"/models/{task_name}"]
-        print(paths)
 
-        # unique name to create the pydantic model
+        # Url path to register the model
+        paths = [f"/models/{task_name}"]
+
+        # Unique name to create the pydantic model
         unique_name = (hashlib.md5(task_name.encode()).hexdigest())
 
-        # create response model
+        # Create response model
         resp_model = create_model(
             "V1V1ResponseModel" + unique_name,
             result=(typing.Any, ...),
             __base__=ResponseBase,
         )
 
-        # template predict endpoint function to dynamically serve different models
+        # Template predict endpoint function to dynamically serve different models
         def predict(
             request: Request,
             text: str,
             text_pair: str = None,
         ):
-            print("The text:{}, text_pair:{}".format(text, text_pair))
             result = self._app._model_manager.predict(text, text_pair)
             return {"text": text, 'result': result}
 
-        # register the route and add to the app
+        # Register the route and add to the app
         router = APIRouter()
         for path in paths:
             router.add_api_route(
@@ -69,21 +68,21 @@ class HttpRouterManager(BaseRouterManager):
 
     def register_taskflow_router(self, task_name):
 
-        # url path to register the model
+        # Url path to register the model
         paths = [f"/taskflow/{task_name}"]
         print(paths)
 
-        # unique name to create the pydantic model
+        # Unique name to create the pydantic model
         unique_name = (hashlib.md5(task_name.encode()).hexdigest())
 
-        # create response model
+        # Create response model
         resp_model = create_model(
             "V1V1ResponseModel" + unique_name,
             result=(typing.Any, ...),
             __base__=ResponseBase,
         )
 
-        # template predict endpoint function to dynamically serve different models
+        # Template predict endpoint function to dynamically serve different models
         def predict(
             request: Request,
             text: str,
@@ -91,7 +90,7 @@ class HttpRouterManager(BaseRouterManager):
             result = self._app._taskflow_manager.predict(text)
             return {"text": text, 'result': result}
 
-        # register the route and add to the app
+        # Register the route and add to the app
         router = APIRouter()
         for path in paths:
             router.add_api_route(

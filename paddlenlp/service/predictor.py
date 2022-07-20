@@ -192,11 +192,11 @@ class Predictor:
         self._config.set_cpu_math_library_num_threads(self._num_threads)
         self._config.delete_pass("embedding_eltwise_layernorm_fuse_pass")
         self._predictor = paddle.inference.create_predictor(self._config)
-        self.input_handles = [
+        self._input_handles = [
             self._predictor.get_input_handle(name)
             for name in self._predictor.get_input_names()
         ]
-        self.output_handle = [
+        self._output_handles = [
             self._predictor.get_output_handle(name)
             for name in self._predictor.get_output_names()
         ]
