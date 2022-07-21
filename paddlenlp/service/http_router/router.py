@@ -86,8 +86,8 @@ class HttpRouterManager(BaseRouterManager):
         # Create request model
         req_model = create_model(
             "RequestModel" + unique_name,
-            data=(request_type, ...),
-            __base__=V1RequestBase,
+            data=(typing.Any, ...),
+            __base__=RequestBase,
         )
 
         # Create response model
@@ -98,12 +98,10 @@ class HttpRouterManager(BaseRouterManager):
         )
 
         # Template predict endpoint function to dynamically serve different models
-        def predict(
-            request: Request,
-            text: str,
-        ):
-            result = self._app._taskflow_manager.predict(text)
-            return {"text": text, 'result': result}
+        def predict(request: Request, inference_request: req_model):
+            result = self._app._taskflow_manager.predict(
+                inference_request.data, inference_request.parameters)
+            return {'result': result}
 
         # Register the route and add to the app
         router = APIRouter()
@@ -111,7 +109,7 @@ class HttpRouterManager(BaseRouterManager):
             router.add_api_route(
                 path,
                 predict,
-                methods=["get"],
+                methods=["post"],
                 summary=f"{task_name.title()}",
                 response_model=resp_model,
                 response_model_exclude_unset=True,

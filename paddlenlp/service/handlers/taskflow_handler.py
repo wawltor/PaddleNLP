@@ -20,5 +20,10 @@ class TaskflowHandler:
         self._name = 'taskflow_handler'
 
     @classmethod
-    def process(cls, predictor, text, text_pair=None):
+    def process(cls, predictor, data, parameters):
+        text = None
+        if 'text' in data:
+            text = data['text']
+        if text is None:
+            return {}
         return predictor(text)

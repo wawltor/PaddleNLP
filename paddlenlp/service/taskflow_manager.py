@@ -29,8 +29,8 @@ class TaskflowManager:
         else:
             self._handler_func = func
 
-    def predict(self, text):
+    def predict(self, data, parameters):
         t = time.time()
         t = int(round(t * 1000))
         task_index = t % len(self._task)
-        return self._handler_func(self._task[task_index], text)
+        return self._handler_func(self._task[task_index], data, parameters)
