@@ -57,7 +57,6 @@ class SimpleServer(FastAPI):
                                      tokenizer_name, input_spec, handler,
                                      precision, device_id, batch_size)
         self._model_manager = model_manager
-        self._model_manager.register()
         self._router_manager.register_models_router(task_name)
 
     def register_taskflow(self, task_name, task, func=None):
@@ -86,7 +85,6 @@ class SimpleServer(FastAPI):
                 .format(type(task)))
 
         # Register Taskflow service router
-        taskflow_manager = TaskflowManager()
+        taskflow_manager = TaskflowManager(task, func)
         self._taskflow_manager = taskflow_manager
-        self._taskflow_manager._register(task, func)
         self._router_manager.register_taskflow_router(task_name)

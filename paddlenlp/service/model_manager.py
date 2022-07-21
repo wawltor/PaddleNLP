@@ -37,8 +37,9 @@ class ModelManager:
         self._precision = precision
         self._device_id = device_id
         self._tokenizer = None
+        self._register()
 
-    def register(self):
+    def _register(self):
         # Get the model handler
         if self._handler is None:
             model_class = self._get_model_class()
@@ -123,7 +124,7 @@ class ModelManager:
         predictor_id = t % len(self._predictor_list)
         return predictor_id
 
-    def predict(self, text, text_pair):
+    def predict(self, data, parameters):
         predictor_id = self._get_predict_id()
         return self._handler(self._predictor_list[predictor_id],
-                             self._tokenizer, text, text_pair)
+                             self._tokenizer, data, parameters)

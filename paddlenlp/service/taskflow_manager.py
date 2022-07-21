@@ -22,14 +22,12 @@ class TaskflowManager:
     The TaskflowManager could predict the raw text.
     """
 
-    def __init__(self):
-        self._task = None
-        self._handler_func = TaskflowHandler.process
-
-    def _register(self, task, func=None):
+    def __init__(self, task, func=None):
         self._task = task
-        if func is not None:
-            self._handler = func
+        if func is None:
+            self._handler_func = TaskflowHandler.process
+        else:
+            self._handler_func = func
 
     def predict(self, text):
         t = time.time()

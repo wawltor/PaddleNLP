@@ -24,5 +24,5 @@ class BaseModelHandler(metaclass=ABCMeta):
 
     @classmethod
     @abstractmethod
-    def process(cls, predictor, tokenizer, text, text_pair=None, batch_size=1):
+    def process(cls, predictor, tokenizer, data, parameters):
         pass

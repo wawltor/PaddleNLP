@@ -24,9 +24,24 @@ class SequenceClassificationModelHandler(BaseModelHandler):
         super().__init__()
 
     @classmethod
-    def process(cls, predictor, tokenizer, text, text_pair=None, batch_size=1):
+    def process(cls, predictor, tokenizer, data, parameters):
+        max_seq_len = 128
+        batch_size = 1
+        if 'max_seq_len' not in parameters:
+            max_seq_len = parameters['max_seq_len']
+        if 'batch_size' not in parameters:
+            batch_size = parameters['max_seq_len']
+        text = None
+        if 'text' in data:
+            text = data['text']
+        if text is None:
+            return {}
+        text_pair = None
+        if 'text_pair' in data:
+            text_pair = data['text_pair']
+        print("The text:{}".format(text))
         examples = []
-        # FIXME(wawltor) The max_seq_len is need
+
         if isinstance(text, str):
             text = [text]
         if text_pair is not None:
@@ -34,11 +49,13 @@ class SequenceClassificationModelHandler(BaseModelHandler):
                 text_pair = [text_pair]
         if text_pair is None:
             for data in text:
-                result = tokenizer(text=data, text_pair=None)
+                result = tokenizer(text=data, max_length=max_seq_len)
                 examples.append((result['input_ids'], result['token_type_ids']))
         else:
             for data1, data2 in zip(text, text_pair):
-                result = tokenizer(text=data1, text_pair=data2)
+                result = tokenizer(text=data1,
+                                   text_pair=data2,
+                                   max_length=max_seq_len)
                 examples.append((result['input_ids'], result['token_type_ids']))
 
         # Seperates data into some batches.

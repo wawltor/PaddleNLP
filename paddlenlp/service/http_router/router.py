@@ -26,6 +26,10 @@ class ResponseBase(BaseModel):
     text: Optional[str] = None
 
 
+class RequestBase(BaseModel, extra=Extra.forbid):
+    parameters: Optional[dict] = {}
+
+
 class HttpRouterManager(BaseRouterManager):
 
     def register_models_router(self, task_name):
@@ -36,21 +40,25 @@ class HttpRouterManager(BaseRouterManager):
         # Unique name to create the pydantic model
         unique_name = (hashlib.md5(task_name.encode()).hexdigest())
 
+        # Create request model
+        req_model = create_model(
+            "RequestModel" + unique_name,
+            data=(typing.Any, ...),
+            __base__=RequestBase,
+        )
+
         # Create response model
         resp_model = create_model(
-            "V1V1ResponseModel" + unique_name,
+            "ResponseModel" + unique_name,
             result=(typing.Any, ...),
             __base__=ResponseBase,
         )
 
         # Template predict endpoint function to dynamically serve different models
-        def predict(
-            request: Request,
-            text: str,
-            text_pair: str = None,
-        ):
-            result = self._app._model_manager.predict(text, text_pair)
-            return {"text": text, 'result': result}
+        def predict(request: Request, inference_request: req_model):
+            result = self._app._model_manager.predict(
+                inference_request.data, inference_request.parameters)
+            return {'result': result}
 
         # Register the route and add to the app
         router = APIRouter()
@@ -58,7 +66,7 @@ class HttpRouterManager(BaseRouterManager):
             router.add_api_route(
                 path,
                 predict,
-                methods=["get"],
+                methods=["post"],
                 summary=f"{task_name.title()}",
                 response_model=resp_model,
                 response_model_exclude_unset=True,
@@ -75,9 +83,16 @@ class HttpRouterManager(BaseRouterManager):
         # Unique name to create the pydantic model
         unique_name = (hashlib.md5(task_name.encode()).hexdigest())
 
+        # Create request model
+        req_model = create_model(
+            "RequestModel" + unique_name,
+            data=(request_type, ...),
+            __base__=V1RequestBase,
+        )
+
         # Create response model
         resp_model = create_model(
-            "V1V1ResponseModel" + unique_name,
+            "ResponseModel" + unique_name,
             result=(typing.Any, ...),
             __base__=ResponseBase,
         )
