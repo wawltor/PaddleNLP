@@ -83,7 +83,7 @@ class SequenceClassificationModelHandler(BaseModelHandler):
                 ]
                 results.extend(output)
             else:
-                result = self.predictor._predictor.run(
+                result = predictor._predictor.run(
                     None, {
                         'input_ids': input_ids,
                         'token_type_ids': token_type_ids

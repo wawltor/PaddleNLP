@@ -102,6 +102,7 @@ class Predictor:
 
     def _create_predictor(self):
         # Get the model parameter path and model config path
+        logger.info('Just test')
         model_class = self._model_class()
 
         if model_class is None:
@@ -127,6 +128,7 @@ class Predictor:
                                              'inference')
             is_from_static = False
 
+        logger.info('Just test 1')
         is_int8_model = False
         if is_from_static:
             is_int8_model = self._is_int8_model(static_model_path)
@@ -134,6 +136,7 @@ class Predictor:
         # Judge the predictor type for the inference
         if self._precision == 'int8' and not is_int8_model:
             self._precision = 'fp32'
+
         if is_int8_model:
             self._precision = 'int8'
 
@@ -141,7 +144,7 @@ class Predictor:
         if self._predictor_type == 'paddle_inference':
             self._prepare_paddle_mode(static_model_path)
         else:
-            self._prepare_onnx_mode()
+            self._prepare_onnx_mode(static_model_path)
 
     def _check_predictor_type(self):
         predictor_type = 'paddle_inference'
@@ -149,7 +152,8 @@ class Predictor:
         if self._precision == 'int8' or device == "xpu" or device == "cpu":
             predictor_type = 'paddle_inference'
         else:
-            if device == 'gpu' and self._precision == 'fp16':
+            logger.info("The device is :{}".format(device))
+            if device.count('gpu') and self._precision == 'fp16':
                 try:
                     import onnx
                     import onnxruntime as ort
@@ -157,9 +161,12 @@ class Predictor:
                     from onnxconverter_common import float16
                     predictor_type = 'onnxruntime'
                 except:
-                    logger.warning(
-                        "The inference precision is change to 'fp32', please install the dependencies that required for 'fp16' inference, pip install onnxruntime-gpu onnx onnxconverter-common"
+                    logger.error(
+                        "The inference precision is change to 'fp32', please install the dependencies that required for 'fp16' inference, you could use the commands as fololws:\n" \
+                         " ****** pip uninstall onnxruntime ******\n" \
+                         " ****** pip install onnxruntime-gpu onnx onnxconverter-common ******" \
                     )
+                    sys.exit(-1)
         return predictor_type
 
     def _prepare_paddle_mode(self, static_model_path):
@@ -201,7 +208,7 @@ class Predictor:
             for name in self._predictor.get_output_names()
         ]
 
-    def _prepare_onnx_mode(self):
+    def _prepare_onnx_mode(self, static_model_path):
         import onnx
         import onnxruntime as ort
         import paddle2onnx
@@ -211,9 +218,11 @@ class Predictor:
             os.mkdir(onnx_dir)
         float_onnx_file = os.path.join(onnx_dir, 'model.onnx')
         if not os.path.exists(float_onnx_file):
+            model_path = static_model_path + ".pdmodel"
+            params_file = static_model_path + ".pdiparams"
             onnx_model = paddle2onnx.command.c_paddle_to_onnx(
-                model_file=self._static_model_file,
-                params_file=self._static_params_file,
+                model_file=model_path,
+                params_file=params_file,
                 opset_version=13,
                 enable_onnx_checker=True)
             with open(float_onnx_file, "wb") as f:
@@ -224,10 +233,10 @@ class Predictor:
             trans_model = float16.convert_float_to_float16(onnx_model,
                                                            keep_io_types=True)
             onnx.save_model(trans_model, fp16_model_file)
-        #providers = ['CUDAExecutionProvider', provider_options=[{'device_id': device_id}]]
         providers = ['CUDAExecutionProvider']
         sess_options = ort.SessionOptions()
         sess_options.inter_op_num_threads = self._num_threads
+        device_id = int(self._device.split(":")[-1])
         self._predictor = ort.InferenceSession(fp16_model_file,
                                                sess_options=sess_options,
                                                providers=providers,
