@@ -127,31 +127,7 @@ class ErnieForTokenClassificationPredictor(object):
         result = np.array(infer_data[0])
         tokens_label = result.argmax(axis=-1).tolist()
         value = []
-        for batch, token_label in enumerate(tokens_label):
-            start = -1
-            label_name = ""
-            items = []
-            for i, label in enumerate(token_label):
-                if (self.label_names[label] == "O" or "B-" in self.label_names[label]) and start >= 0:
-                    entity = input_data[batch][start : i - 1]
-                    if isinstance(entity, list):
-                        entity = "".join(entity)
-                    if len(entity) == 0:
-                        break
-                    items.append(
-                        {
-                            "pos": [start, i - 2],
-                            "entity": entity,
-                            "label": label_name,
-                        }
-                    )
-                    start = -1
-                if "B-" in self.label_names[label]:
-                    start = i - 1
-                    label_name = self.label_names[label][2:]
-            value.append(items)
-
-        out_dict = {"value": value, "tokens_label": tokens_label}
+        out_dict = {"value": tokens_label}
         return out_dict
 
     def predict(self, texts):
@@ -178,4 +154,5 @@ if __name__ == "__main__":
     batch_data = batchfy_text(texts, args.batch_size)
     for data in batch_data:
         outputs = predictor.predict(data)
-        token_cls_print_ret(outputs, data)
+        print(outputs)
+        #token_cls_print_ret(outputs, data)

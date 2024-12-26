@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 import paddle
 from paddle.distributed import fleet
 
-from llm.predict.predictor import ModelArgument, PredictorArgument, create_predictor
+from predict.predictor import ModelArgument, PredictorArgument, create_predictor
 from paddlenlp.trainer import PdArgumentParser
 from paddlenlp.trl import llm_utils
 
